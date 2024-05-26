@@ -1,234 +1,287 @@
 from fuzzywuzzy import process
-import en_core_web_sm
-# import win32com.client as wincl
-import json
+import signal
 
-from gtts import gTTS
-import playsound
-import os
+from classes.Menu import Menu
+from classes.TTS import TTS
+from classes.User import User
+from classes.Orders import Orders
 
-# speak = wincl.Dispatch("SAPI.SpVoice")
 minConfidence = 60
-tts = gTTS('a')
+
+tts = TTS()
+menu = Menu()
+user = User()
+orders = Orders()
 
 
-
-def retrieveOrders():
-    try:
-        with open('orders.txt', 'r') as f:
-            orders = json.load(f)
-    except FileNotFoundError:
-        orders = {}
-    return orders
+################################################################################
+########### Application logic ##################################################
+################################################################################
 
 
-storedorders = retrieveOrders()
+def view_menu():
+    pass
+
+def new_order():
+    pass
+
+def view_history():
+    pass
 
 
-def confirmOrder(name, storedorders, currentOrder):
-    say('Your order has been processed, thank you for ordering from Chi-Bot')
-    storedorders[name][currentOrderNum] = currentOrder
-    with open('orders.txt', 'w') as f:
-        json.dump(storedorders, f)
-
-
-def say(text):
-    tts.text = text
-    tts.save('text.mp3')
-    playsound.playsound('text.mp3')
-    os.remove('text.mp3')
-
-
-def ordering(name, storedorders, previousOrder=None):
-    currentOrder = previousOrder if previousOrder is not None else {}
-
+# Acts as the entry point to the system proper
+# Will repeately prompt the user to select an option until they leave
+def main_menu():
     while True:
-        say('The courses available are:')
-        for thing in menu.keys():
-            say(' - ' + thing.capitalize())
-        say('Which course would you like to order from?')
-        searchCourse = input('')
-        if not searchCourse:
-            if len(currentOrder.keys()) < 3:
-                say('Your current order is:')
-                dishes = currentOrder
-                for dish in dishes:
-                    price = dishes[dish]
-                    say(f"{dish.capitalize():25}     ${price:5.2f}")
-                say('You need at least 3 items for delivery, please select more')
-                selectedConfidence = 0
-                while selectedConfidence < 80:
-                    say('Would you like to:')
-                    say('- Order more items')
-                    say('- Exit')
-                    choice = input('')
-                    if not choice:
-                        return
-                    (selectedChoice, selectedConfidence) = process.extractOne(
-                        choice, ['order more', 'exit'])
+        tts.say('''
+                Would you like to:
+                - View the menu,
+                - Place a new order,
+                - View order history, or
+                - Exit
+                '''
+        )
 
-                    if selectedConfidence >= 60:
-                        if selectedChoice == 'exit':
-                            return
-                        elif selectedChoice == 'order more':
-                            return ordering(name, storedorders, currentOrder)
-            else:
-                say('Your current order is:')
-                dishes = currentOrder
-                for dish in dishes:
-                    price = dishes[dish]
-                    say(f"{dish.capitalize():25}    ${price:5.2f}")
-                say('You have more than 3 items, which is enough for delivery')
-                say('Would you like to:')
-                say('- Order more items')
-                say('- Confirm your order')
-                say('- Exit')
-                confirm = input('')
-                if not confirm:
-                    return
-                else:
-                    (selectedChoice, selectedConfidence) = process.extractOne(
-                        confirm, ['order more items', 'confirm order', 'exit'])
-
-                    if selectedChoice == 'order more items':
-                        return ordering(name, storedorders, currentOrder)
-
-                    elif selectedChoice == 'confirm order':
-                        confirmOrder(name, storedorders, currentOrder)
-                        return
-
-                    elif selectedChoice == 'exit':
-                        return
-        else:
-            (courseName, confidence) = process.extractOne(
-                searchCourse, menu.keys())
-
-            if confidence > minConfidence:
-                dishes = menu[courseName]
-                say(f'The {courseName} dishes are:')
-                for dish in dishes:
-                    price = float(dishes[dish])
-                    say(f'  {dish}   ${price: .2f}')
-
-            say('Which dish would you like to order?')
-            dish = input(f'').lower().strip()
-            if not dish:
-                return
-            (dishName, confidence) = process.extractOne(
-                dish, menu[courseName].keys())
-            price = menu[courseName][dishName]
-            currentOrder[dishName] = price
-            say(f'Ok, {dishName} has been added to the order')
+        choice = input('')
+        while not choice:
+            tts.say('''Please enter a valid choice.''')
+            choice = input('')
 
 
-def dec():
-    say('Would you like to:')
-    say('- See the menu')
-    say('- Order food')
-    say('- See previous orders')
-    say('- Exit')
+        # Do fuzzy string search here
+
+        match choice:
+            case 'menu':
+                view_menu()
+            case 'order':
+                new_order()
+            case 'history':
+                view_history()
+            case 'exit':
+                leave()
+            case _:
+                tts.say('''
+                        I could not understand that, please try again.
+                        '''
+                    )
 
 
-def menuThing():
-    while True:
-        say(f'The courses available are: ')
-        for thing in menu.keys():
-            say(' - ' + thing.capitalize())
-        say('Which menu would you like to view?')
-        searchCourse = input('')
+################################################################################
+###########  Initial setup  ####################################################
+################################################################################
 
-        if not searchCourse:
-            return
-        (menuCourse, confidence) = process.extractOne(searchCourse, courses)
+# Elegantly exit application
+def leave():
+    tts.say('''
+            Thank you for using Kai-bot. We hope to see you again soon!
+            '''
+    )
 
-        if confidence > 60:
-            print(('=== ' + menuCourse.capitalize() + ' === ').center(25))
-            dishes = menu[menuCourse]
-            for dish in dishes:
-                price = dishes[dish]
-                print(f"{dish.capitalize():25}    ${price:5.2f}")
-
-            print('')
-            return
+    tts.remove()
+    exit()
 
 
-menu = {
-    'starter': {
-        'spring rolls': 4.00,
-        'dumplings': 5.50,
-        'pork buns': 7.50
-    },
-
-    'main': {
-        'peking duck': 24.00,
-        'sweet n sour pork': 19.00
-    },
-
-    'dessert': {
-        'red bean buns': 10.00,
-        'egg tart': 9.50
-    }
-}
-
-courses = list(menu.keys())
+# Catches CTRL-C
+def signal_handler(sig, frame):
+    leave()
 
 
-say('Hello, my name is Chi-Bot, an online food ordering system.')
+# Ask for users name, don't accept empty string
+def get_name() -> str:
+    tts.say(
+        '''
+        What\'s your name?
+        '''
+    )
 
-nlp = en_core_web_sm.load()
-say("What's your name?")
-name = input('')
-# doc = nlp(name + ' and')
-# print(doc)
-# XA = [(X.text, X.label_) for X in doc.ents]
-# (name, type) = XA[0]
+    name = input('')
+    while not name:
+        tts.say('''Please enter a valid name.''')
+        name = input('')
+    
+    return name
 
 
-nama = name.capitalize()
+def main():
+    tts.say(
+        '''
+        Hello, my name is Kai-Bot, an online food ordering system.
+        If you wish to leave at any time, please press control-C.
+        '''
+    )
+
+    # Get and store user's name
+    name = get_name()
+    user.set_name(name)
+
+    # Greet user w/ input name
+    tts.say(user.get_greeting())
+
+    # Navigate to main logic loop
+    main_menu()
+
+    leave()
 
 
-if name in storedorders.keys():
-    say(f'Welcome back, {nama}')
-    currentOrderNum = len(storedorders[name].keys()) + 1
-else:
-    storedorders[name] = {}
-    say(f'Hello {nama}, I hope your doing well')
-    currentOrderNum = 1
-say('If you wish to stop a request at any time, please enter nothing')
+if __name__ == '__main__':
+    signal.signal(signal.SIGINT, signal_handler)
+    main()
 
-minuconfidence = 50
 
-while True:
-    dec()
 
-    hel = input('')
 
-    if not hel:
-        exit()
 
-    else:
-        (firstChoice, minuconfidence) = process.extractOne(
-            hel, ['menu', 'order food', 'previous order', 'exit'])
 
-        if firstChoice == 'menu':
-            menuThing()
 
-        elif firstChoice == 'order food':
-            ordering(name, storedorders)
+# def confirmOrder(name, storedorders, currentOrder):
+#     tts.say('Your order has been processed, thank you for ordering from Kai-Bot')
+#     storedorders[name][currentOrderNum] = currentOrder
+#     with open('orders.txt', 'w') as f:
+#         json.dump(storedorders, f)
 
-        elif firstChoice == 'previous order':
-            if currentOrderNum > 1:
-                print(('=== Previous Orders === ').center(25))
-                for order in storedorders[name]:
-                    dishes = storedorders[name][order]
-                    print(f'Order number {order}'.center(25))
-                    for dish in dishes:
-                        price = dishes[dish]
-                        print(f" {dish.capitalize():20}    ${price:5.2f}")
-                    print()
-            else:
-                say('You do not have any previous orders')
 
-        elif firstChoice == 'exit':
-            say('Bye now, have a nice day')
-            exit()
+
+
+
+# def ordering(name, storedorders, previousOrder=None):
+#     currentOrder = previousOrder if previousOrder is not None else {}
+
+#     while True:
+#         tts.say('The courses available are:')
+#         for thing in menu.keys():
+#             tts.say(' - ' + thing.capitalize())
+#         tts.say('Which course would you like to order from?')
+#         searchCourse = input('')
+#         if not searchCourse:
+#             if len(currentOrder.keys()) < 3:
+#                 tts.say('Your current order is:')
+#                 dishes = currentOrder
+#                 for dish in dishes:
+#                     price = dishes[dish]
+#                     tts.say(f"{dish.capitalize():25}     ${price:5.2f}")
+#                 tts.say('You need at least 3 items for delivery, please select more')
+#                 selectedConfidence = 0
+#                 while selectedConfidence < 80:
+#                     tts.say('Would you like to:')
+#                     tts.say('- Order more items')
+#                     tts.say('- Exit')
+#                     choice = input('')
+#                     if not choice:
+#                         return
+#                     (selectedChoice, selectedConfidence) = process.extractOne(
+#                         choice, ['order more', 'exit'])
+
+#                     if selectedConfidence >= 60:
+#                         if selectedChoice == 'exit':
+#                             return
+#                         elif selectedChoice == 'order more':
+#                             return ordering(name, storedorders, currentOrder)
+#             else:
+#                 tts.say('Your current order is:')
+#                 dishes = currentOrder
+#                 for dish in dishes:
+#                     price = dishes[dish]
+#                     tts.say(f"{dish.capitalize():25}    ${price:5.2f}")
+#                 tts.say('You have more than 3 items, which is enough for delivery')
+#                 tts.say('Would you like to:')
+#                 tts.say('- Order more items')
+#                 tts.say('- Confirm your order')
+#                 tts.say('- Exit')
+#                 confirm = input('')
+#                 if not confirm:
+#                     return
+#                 else:
+#                     (selectedChoice, selectedConfidence) = process.extractOne(
+#                         confirm, ['order more items', 'confirm order', 'exit'])
+
+#                     if selectedChoice == 'order more items':
+#                         return ordering(name, storedorders, currentOrder)
+
+#                     elif selectedChoice == 'confirm order':
+#                         confirmOrder(name, storedorders, currentOrder)
+#                         return
+
+#                     elif selectedChoice == 'exit':
+#                         return
+#         else:
+#             (courseName, confidence) = process.extractOne(
+#                 searchCourse, menu.keys())
+
+#             if confidence > minConfidence:
+#                 dishes = menu[courseName]
+#                 tts.say(f'The {courseName} dishes are:')
+#                 for dish in dishes:
+#                     price = float(dishes[dish])
+#                     tts.say(f'  {dish}   ${price: .2f}')
+
+#             tts.say('Which dish would you like to order?')
+#             dish = input(f'').lower().strip()
+#             if not dish:
+#                 return
+#             (dishName, confidence) = process.extractOne(
+#                 dish, menu[courseName].keys())
+#             price = menu[courseName][dishName]
+#             currentOrder[dishName] = price
+#             tts.say(f'Ok, {dishName} has been added to the order')
+
+
+# def menuThing():
+#     while True:
+#         tts.say(f'The courses available are: ')
+#         for thing in menu.keys():
+#             tts.say(' - ' + thing.capitalize())
+#         tts.say('Which menu would you like to view?')
+#         searchCourse = input('')
+
+#         if not searchCourse:
+#             return
+#         (menuCourse, confidence) = process.extractOne(searchCourse, courses)
+
+#         if confidence > 60:
+#             print(('=== ' + menuCourse.capitalize() + ' === ').center(25))
+#             dishes = menu[menuCourse]
+#             for dish in dishes:
+#                 price = dishes[dish]
+#                 print(f"{dish.capitalize():25}    ${price:5.2f}")
+
+#             print('')
+#             return
+
+
+
+
+# # if name in storedorders.keys():
+# #     tts.say(f'Welcome back, {nama}')
+# #     currentOrderNum = len(storedorders[name].keys()) + 1
+# # else:
+# #     storedorders[name] = {}
+# #     tts.say(f'Hello {nama}, I hope your doing well')
+# #     currentOrderNum = 1
+
+
+
+# (firstChoice, minuconfidence) = process.extractOne(
+#     hel, ['menu', 'order food', 'previous order', 'exit'])
+
+# if firstChoice == 'menu':
+#     menuThing()
+
+# elif firstChoice == 'order food':
+#     ordering(name, storedorders)
+
+# elif firstChoice == 'previous order':
+#     if currentOrderNum > 1:
+#         print(('=== Previous Orders === ').center(25))
+#         for order in storedorders[name]:
+#             dishes = storedorders[name][order]
+#             print(f'Order number {order}'.center(25))
+#             for dish in dishes:
+#                 price = dishes[dish]
+#                 print(f" {dish.capitalize():20}    ${price:5.2f}")
+#             print()
+#     else:
+#         tts.say('You do not have any previous orders')
+
+# elif firstChoice == 'exit':
+#     tts.say('Bye now, have a nice day')
+#     exit()
