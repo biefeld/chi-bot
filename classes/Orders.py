@@ -1,8 +1,10 @@
 import json
 
+DIR = './db'
+
 class Orders:
-    def __init__(self, path: str = './db/orders.json') -> None:
-        self.path = path
+    def __init__(self) -> None:
+        self.path = f'{DIR}/orders.json'
         self.orders = self.load()
 
     def __str__(self) -> str:

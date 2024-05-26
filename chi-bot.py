@@ -20,12 +20,15 @@ orders = Orders()
 
 
 def view_menu():
+    # TODO
     pass
 
 def new_order():
+    # TODO
     pass
 
 def view_history():
+    # TODO
     pass
 
 
@@ -77,7 +80,7 @@ def leave():
             '''
     )
 
-    tts.remove()
+    tts.clean()
     exit()
 
 

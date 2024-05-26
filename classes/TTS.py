@@ -3,16 +3,16 @@ from playsound import playsound as play
 import os
 
 FLUSH_TERM = True
-PATH = './.tts'
+DIR = './.tts'
 
 
 class TTS():
     def __init__(self) -> None:
         self.tts = gTTS('Error: this is a default message.')
-        self.path = PATH + '/text.mp3'
+        self.path = f'{DIR}/text.mp3'
 
-        if (not os.path.isdir(PATH)):
-            os.mkdir(PATH)
+        if (not os.path.isdir(DIR)):
+            os.mkdir(DIR)
 
 
     def say(self, text: str) -> None:
@@ -26,7 +26,7 @@ class TTS():
         play(self.path)
 
 
-    def remove(self) -> None:
+    def clean(self) -> None:
         try:
             os.remove(self.path)
         except FileNotFoundError:
