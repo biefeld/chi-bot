@@ -1,0 +1,17 @@
+{
+    "starter": {
+        "spring rolls": 4.00,
+        "dumplings": 5.50,
+        "pork buns": 7.50
+    },
+
+    "main": {
+        "peking duck": 24.00,
+        "sweet n sour pork": 19.00
+    },
+
+    "dessert": {
+        "red bean buns": 10.00,
+        "egg tart": 9.50
+    }
+}
